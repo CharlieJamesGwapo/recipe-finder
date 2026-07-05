@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { CUISINES, DIETS, INTOLERANCES, MEAL_TYPES } from '@/lib/api';
 import { SearchFilters } from '@/lib/types';
 
@@ -12,15 +12,33 @@ interface SearchBarProps {
 
 export function SearchBar({ onSearch, showFilters = true }: SearchBarProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [query, setQuery] = useState('');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
-    cuisine: searchParams.get('cuisine')?.split(',') || [],
-    diet: searchParams.get('diet')?.split(',') || [],
-    intolerance: searchParams.get('intolerance')?.split(',') || [],
-    type: searchParams.get('type') || '',
+    cuisine: [],
+    diet: [],
+    intolerance: [],
+    type: '',
   });
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+
+      // Only read URL params on client side
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        setQuery(params.get('q') || '');
+        setFilters({
+          cuisine: params.get('cuisine')?.split(',').filter(Boolean) || [],
+          diet: params.get('diet')?.split(',').filter(Boolean) || [],
+          intolerance: params.get('intolerance')?.split(',').filter(Boolean) || [],
+          type: params.get('type') || '',
+        });
+      }
+    }
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
